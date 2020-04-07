@@ -1,0 +1,57 @@
+on early-init
+    mkdir /firmware 0771 system system
+    mount debugfs debugfs /sys/kernel/debug
+    chmod 0755 /sys/kernel/debug
+
+on fs
+    wait /dev/block/platform/soc.0/${ro.boot.bootdevice}
+    symlink /dev/block/platform/soc.0/${ro.boot.bootdevice} /dev/block/bootdevice
+
+    chmod 0660 /dev/qseecom
+    chown system drmrpc /dev/qseecom
+    chmod 0664 /dev/ion
+    chown system system /dev/ion
+
+on post-fs
+    # Start clearpad_post_probe when filesystem is available for fwflash
+    write /sys/devices/virtual/input/clearpad/post_probe_start 1
+    write /sys/kernel/debug/clearpad/hwtest "XP"
+
+    # Disable BCL
+    write /sys/class/power_supply/bcl/device/mode "disable"
+
+    # Disable msm_thermal core control
+    write /sys/module/msm_thermal/core_control/enabled 0
+
+    # Limit the battery charging current
+    write /sys/class/power_supply/battery/system_temp_level 11
+
+    # All but one core to avoid not to raise temperature
+    write /sys/devices/system/cpu/cpu1/online 0
+    write /sys/devices/system/cpu/cpu2/online 0
+    write /sys/devices/system/cpu/cpu3/online 0
+    write /sys/devices/system/cpu/cpu4/online 0
+    write /sys/devices/system/cpu/cpu5/online 0
+
+    write /sys/module/msm_poweroff/parameters/disable_ramdump 1
+
+on boot
+    setprop sys.usb.config adb
+
+    write /sys/devices/virtual/input/clearpad/wakeup_gesture 1
+
+    # Disable L2 GDHS on 8976
+    write /sys/module/lpm_levels/system/a53/a53-l2-gdhs/idle_enabled N
+    write /sys/module/lpm_levels/system/a72/a72-l2-gdhs/idle_enabled N
+
+on property:ro.crypto.state=encrypted
+    start sbinqseecomd
+
+on property:ro.crypto.fs_crypto_blkdev=/dev/block/dm-0
+    stop sbinqseecomd
+
+service sbinqseecomd /sbin/qseecomd
+    disabled
+    user root
+    group root
+    seclabel u:r:recovery:s0
