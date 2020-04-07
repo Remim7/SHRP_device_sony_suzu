@@ -101,6 +101,7 @@ TW_INCLUDE_CRYPTO := true
 TW_INCLUDE_NTFS_3G := true
 TW_INPUT_BLACKLIST := "hbtp_vm"
 TW_NO_SCREEN_BLANK := true
+TW_USE_TOOLBOX := true
 TW_THEME := portrait_hdpi
 
 # Workaround for error copying vendor files to recovery ramdisk
